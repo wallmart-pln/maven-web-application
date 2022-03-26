@@ -1,0 +1,44 @@
+pipeline{
+agent any
+ 
+tools{
+maven "maven3.8.5"
+}
+options {
+  timestamps()
+  buildDiscarder logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '5')
+}
+triggers {
+  pollSCM '* * * * *'
+}
+stages{
+  stage('Checkoutcode'){
+     steps{
+	 git branch: 'development', credentialsId: '83e4855f-e01a-46d3-8db8-03d2093a6914', url: 'https://github.com/devopstrainingtech/maven-web-application.git'
+	 }
+  }
+  stage('Build'){
+     steps{
+	 sh "mvn clean package"
+	 }
+  }
+  stage('sonarAnalysis'){
+     steps{
+	 sh "mvn sonar:sonar"
+	 }
+  }
+  stage('Deploy to nexus'){
+     steps{
+	 sh "mvn deploy"
+	 }
+  } 
+  stage('deploy to tomcat') {
+      steps{
+        sshagent(['9b7e8e4d-8943-495d-b35f-438c353d077f']) {
+        sh "scp -o StrictHostKeyChecking=no target/maven-web-application.war ec2-user@3.139.78.46:/opt/apache-tomcat-9.0.59/webapps/"
+         }
+      }
+  } 
+    
+}// stages
+}// pipeline
